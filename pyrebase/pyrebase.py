@@ -561,7 +561,6 @@ class Stream(threading.Thread):
         try:
             self.sse = ClosableSSEClient(self.url, session=self.session, build_headers=self.build_headers)
         except Exception as e:
-            print("Exception catched on pyrebase thread.")
             print(e)
             self.stop_evt.set()
             exit(1)
@@ -571,7 +570,12 @@ class Stream(threading.Thread):
                 msg_data["event"] = msg.event
                 if self.stream_id:
                     msg_data["stream_id"] = self.stream_id
-                self.stream_handler(msg_data)
+                try:
+                    self.stream_handler(msg_data)
+                except Exception as e:
+                    print(e)
+                    self.stop_evt.set()
+                    exit(1)
 
     def close(self):
         self.session.close()
