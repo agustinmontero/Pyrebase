@@ -6,10 +6,10 @@ import six
 
 import requests
 
-
 # Technically, we should support streams that mix line endings.  This regex,
 # however, assumes that a system will provide consistent line endings.
 end_of_field = re.compile(r'\r\n\r\n|\r\r|\n\n')
+
 
 class SSEClient(object):
     def __init__(self, url, session, build_headers, last_id=None, retry=3000, **kwargs):
@@ -36,7 +36,10 @@ class SSEClient(object):
         # Keep data here as it streams in
         self.buf = u''
 
-        self._connect()
+        try:
+            self._connect()
+        except:
+            raise
 
     def _connect(self):
         if self.last_id:
@@ -51,7 +54,10 @@ class SSEClient(object):
 
         # TODO: Ensure we're handling redirects.  Might also stick the 'origin'
         # attribute on Events like the Javascript spec requires.
-        self.resp.raise_for_status()
+        try:
+            self.resp.raise_for_status()
+        except:
+            raise
 
     def _event_complete(self):
         return re.search(end_of_field, self.buf) is not None
@@ -104,7 +110,6 @@ class SSEClient(object):
 
 
 class Event(object):
-
     sse_line_pattern = re.compile('(?P<name>[^:]*):?( ?(?P<value>.*))?')
 
     def __init__(self, data='', event='message', id=None, retry=None):

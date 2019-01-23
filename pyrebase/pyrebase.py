@@ -317,9 +317,9 @@ class Database:
         raise_detailed_error(request_object)
         return request_object.json()
 
-    def stream(self, stream_handler, token=None, stream_id=None):
+    def stream(self, stream_handler, stop_evt: threading.Event, token=None, stream_id=None, ):
         request_ref = self.build_request_url(token)
-        return Stream(request_ref, stream_handler, self.build_headers, stream_id)
+        return Stream(request_ref, stream_handler, self.build_headers, stream_id, stop_evt)
 
     def check_token(self, database_url, path, token):
         if token:
@@ -515,11 +515,18 @@ class KeepAuthSession(Session):
 class ClosableSSEClient(SSEClient):
     def __init__(self, *args, **kwargs):
         self.should_connect = True
-        super(ClosableSSEClient, self).__init__(*args, **kwargs)
+        try:
+            super(ClosableSSEClient, self).__init__(*args, **kwargs)
+        except:
+            raise
 
     def _connect(self):
         if self.should_connect:
-            super(ClosableSSEClient, self)._connect()
+            try:
+                super(ClosableSSEClient, self)._connect()
+            except:
+                raise
+
         else:
             raise StopIteration()
 
@@ -530,15 +537,18 @@ class ClosableSSEClient(SSEClient):
         self.resp.raw._fp.fp.raw._sock.close()
 
 
-class Stream:
-    def __init__(self, url, stream_handler, build_headers, stream_id):
+class Stream(threading.Thread):
+    def __init__(self, url, stream_handler, build_headers, stream_id, stop_evt: threading.Event):
+        super().__init__()
+        self.setDaemon(False)
+        self.setName("Stream-thread")
+        self.stop_evt = stop_evt
         self.build_headers = build_headers
         self.url = url
         self.stream_handler = stream_handler
         self.stream_id = stream_id
         self.sse = None
-        self.thread = None
-        self.start()
+        self.session = self.make_session()
 
     def make_session(self):
         """
@@ -547,13 +557,14 @@ class Stream:
         session = KeepAuthSession()
         return session
 
-    def start(self):
-        self.thread = threading.Thread(target=self.start_stream)
-        self.thread.start()
-        return self
-
-    def start_stream(self):
-        self.sse = ClosableSSEClient(self.url, session=self.make_session(), build_headers=self.build_headers)
+    def run(self):
+        try:
+            self.sse = ClosableSSEClient(self.url, session=self.session, build_headers=self.build_headers)
+        except Exception as e:
+            print("Exception catched on pyrebase thread.")
+            print(e)
+            self.stop_evt.set()
+            exit(1)
         for msg in self.sse:
             if msg:
                 msg_data = json.loads(msg.data)
@@ -563,9 +574,10 @@ class Stream:
                 self.stream_handler(msg_data)
 
     def close(self):
-        while not self.sse and not hasattr(self.sse, 'resp'):
-            time.sleep(0.001)
-        self.sse.running = False
-        self.sse.close()
-        self.thread.join()
-        return self
+        self.session.close()
+        if self.sse:
+            # while not self.sse and not hasattr(self.sse, 'resp'):
+            #     time.sleep(0.001)
+            self.sse.running = False
+            self.sse.close()
+        return
