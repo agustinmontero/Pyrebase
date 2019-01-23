@@ -273,12 +273,24 @@ Note: ```shallow()``` can not be used in conjunction with any complex queries.
 You can listen to live changes to your data with the ```stream()``` method.
 
 ```python
+import threading
+
 def stream_handler(message):
     print(message["event"]) # put
     print(message["path"]) # /-K7yGTTEp7O549EzTYtI
     print(message["data"]) # {'title': 'Pyrebase', "body": "etc..."}
 
-my_stream = db.child("posts").stream(stream_handler)
+stop_evt = threading.Event()
+stream = db.child("posts").stream(stream_handler=stream_handler, stop_evt=stop_evt, token=user['idToken'])
+try:
+    stream.start()
+    stop_evt.wait()
+except KeyboardInterrupt:
+    print("Closing streamer...")
+except Exception as e:
+    print(e)
+finally:
+    stream.close()
 ```
 
 You should at least handle `put` and `patch` events. Refer to ["Streaming from the REST API"][streaming] for details.
@@ -288,7 +300,7 @@ You should at least handle `put` and `patch` events. Refer to ["Streaming from t
 You can also add a ```stream_id``` to help you identify a stream if you have multiple running:
 
 ```
-my_stream = db.child("posts").stream(stream_handler, stream_id="new_posts")
+my_stream = db.child("posts").stream(stream_handler, stop_evt, stream_id="new_posts")
 ```
 
 #### close the stream
