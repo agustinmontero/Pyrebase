@@ -540,7 +540,7 @@ class ClosableSSEClient(SSEClient):
 class Stream(threading.Thread):
     def __init__(self, url, stream_handler, build_headers, stream_id, stop_evt: threading.Event):
         super().__init__()
-        self.setDaemon(False)
+        self.setDaemon(True)
         self.setName("Stream-thread")
         self.stop_evt = stop_evt
         self.build_headers = build_headers
