@@ -65,6 +65,8 @@ class SSEClient(object):
         return self
 
     def __next__(self):
+        # TODO:  Revisar el rotorno de cada caso(put, patch, keep-alive, cancel and auth_revoked)
+        #  https://firebase.google.com/docs/reference/rest/database/#section-streaming
         while not self._event_complete():
             try:
                 nextchar = next(self.resp_iterator)
@@ -84,14 +86,15 @@ class SSEClient(object):
         tail = "".join(split[1:])
 
         self.buf = tail
-        msg = Event.parse(head)
+        msg = Event.parse(head)  # Iterable object
 
-        if msg.data == "credential is no longer valid":
-            self._connect()
-            return None
+        # if msg.data == "credential is no longer valid":
+        #     self._connect()  # TODO: check if is better return mge auth_revoked
+        #     return None
 
-        if msg.data == 'null':
-            return None
+        # if (msg.data == 'null') and (msg.event != 'keep-alive'):
+        #     print("Data null event={}".format(msg.event))
+        #     return None
 
         # If the server requests a specific retry delay, we need to honor it.
         if msg.retry:

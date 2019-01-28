@@ -1,9 +1,12 @@
-from setuptools import setup, find_packages
+import setuptools
 
-setup(
+with open("README.md", "r") as fh:
+    long_description = fh.read()
+
+setuptools.setup(
     name='Pyrebase',
     version='3.0.27',
-    url='https://github.com/thisbejim/Pyrebase',
+    url='https://github.com/agustinmontero/Pyrebase.git',
     description='A simple python wrapper for the Firebase API',
     author='James Childs-Maidment',
     license='MIT',
@@ -14,7 +17,7 @@ setup(
         'Programming Language :: Python :: 3.4',
     ],
     keywords='Firebase',
-    packages=find_packages(exclude=['tests']),
+    packages=setuptools.find_packages(exclude=['tests']),
     install_requires=[
         'requests==2.11.1',
         'gcloud==0.17.0',
