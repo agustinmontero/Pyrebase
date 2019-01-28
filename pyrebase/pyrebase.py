@@ -1,3 +1,4 @@
+import sys, traceback
 import requests
 from requests import Session
 from requests.exceptions import HTTPError
@@ -565,13 +566,16 @@ class Stream(threading.Thread):
             self.sse = ClosableSSEClient(self.url, session=self.session, build_headers=self.build_headers)
             for msg in self.sse:
                 if msg:
-                    msg_data = json.loads(msg.data) or {}
+                    msg_data = json.loads(msg.data, encoding='utf-8') or {}
                     msg_data["event"] = msg.event
                     if self.stream_id:
                         msg_data["stream_id"] = self.stream_id
                     self.stream_handler(msg_data)
-        except Exception as e:
-            print("Exception in Stream: \n{}".format(e))
+        except Exception:
+            print("Exception in Stream: \n{}")
+            print("-" * 60)
+            traceback.print_exc(file=sys.stdout)
+            print("-" * 60)
             self.stop_evt.set()
 
     def close(self):

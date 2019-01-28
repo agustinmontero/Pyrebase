@@ -87,6 +87,11 @@ class SSEClient(object):
         self.buf = tail
         msg = Event.parse(head)  # Iterable object
 
+        if msg.data == "credential is no longer valid":
+            print("credential is no longer valid, conecting... event={}".format(msg.event))
+            self._connect()  # TODO: check if is better return mge auth_revoked
+            return None
+
         # If the server requests a specific retry delay, we need to honor it.
         if msg.retry:
             self.retry = msg.retry
