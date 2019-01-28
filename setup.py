@@ -5,13 +5,13 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name='Pyrebase',
-    version='3.0.27',
+    version='2019.01.28',
     url='https://github.com/agustinmontero/Pyrebase.git',
     description='A simple python wrapper for the Firebase API',
     author='James Childs-Maidment',
     license='MIT',
     classifiers=[
-        'Development Status :: 3 - Alpha',
+        'Development Status :: 2019 - Alpha',
         'Intended Audience :: Developers',
         'License :: OSI Approved :: MIT License',
         'Programming Language :: Python :: 3.4',

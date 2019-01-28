@@ -563,26 +563,18 @@ class Stream(threading.Thread):
     def run(self):
         try:
             self.sse = ClosableSSEClient(self.url, session=self.session, build_headers=self.build_headers)
-        except Exception as e:
-            print(e)
-            self.stop_evt.set()
-            exit(1)
-        for msg in self.sse:
-            if msg:
-                msg_data = json.loads(msg.data) or {}
-                msg_data["event"] = msg.event
-                if self.stream_id:
-                    msg_data["stream_id"] = self.stream_id
-                try:
+            for msg in self.sse:
+                if msg:
+                    msg_data = json.loads(msg.data) or {}
+                    msg_data["event"] = msg.event
+                    if self.stream_id:
+                        msg_data["stream_id"] = self.stream_id
                     self.stream_handler(msg_data)
-                except Exception as e:
-                    print("Exception in stream:\n{}".format(e))
-                    self.stop_evt.set()
-                    exit(1)
-        self.stop_evt.set()
+        except Exception as e:
+            print("Exception in Stream: \n{}".format(e))
+            self.stop_evt.set()
 
     def close(self):
-        # self.session.close()
         if self.sse:
             # while not self.sse and not hasattr(self.sse, 'resp'):
             #     time.sleep(0.001)
