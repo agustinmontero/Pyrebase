@@ -11,19 +11,19 @@ end_of_field = re.compile(r'\r\n\r\n|\r\r|\n\n')
 
 
 class SSEClient(object):
-    def __init__(self, url, session, build_headers, last_id=None, retry=3000, **kwargs):
-        self.url = url
+    def __init__(self, request_url, last_id=None, retry=3000, **kwargs):
+        self.request_url = request_url
+        # self.build_request_url = build_request_url
+        # self.request_ur = None
         self.last_id = last_id
         self.retry = retry
         self.running = True
         # Optional support for passing in a requests.Session()
-        self.session = session
-        # function for building auth header when token expires
-        self.build_headers = build_headers
+        self.session = requests.Session()
         self.start_time = None
         # Any extra kwargs will be fed into the requests.get call later.
         self.requests_kwargs = kwargs
-
+        self.resp_iterator = None
         # The SSE spec requires making requests with Cache-Control: nocache
         if 'headers' not in self.requests_kwargs:
             self.requests_kwargs['headers'] = {}
@@ -36,25 +36,24 @@ class SSEClient(object):
         self.buf = u''
 
         try:
-            self._connect()
+            self.connect()
         except Exception:
             raise
 
-    def _connect(self):
+    def connect(self):
         if self.last_id:
             self.requests_kwargs['headers']['Last-Event-ID'] = self.last_id
-        headers = self.build_headers()
+        headers = {"content-type": "application/json; charset=UTF-8"}
         self.requests_kwargs['headers'].update(headers)
         # Use session if set.  Otherwise fall back to requests module.
-        self.requester = self.session or requests
-        self.resp = self.requester.get(self.url, stream=True, **self.requests_kwargs)
-
-        self.resp_iterator = self.resp.iter_content(decode_unicode=True)
+        requester = self.session or requests
+        resp = requester.get(self.request_url, stream=True, **self.requests_kwargs)
+        self.resp_iterator = resp.iter_content(decode_unicode=True)
 
         # TODO: Ensure we're handling redirects.  Might also stick the 'origin'
         # attribute on Events like the Javascript spec requires.
         try:
-            self.resp.raise_for_status()
+            resp.raise_for_status()
         except Exception:
             raise
 
@@ -72,7 +71,7 @@ class SSEClient(object):
                 self.buf += nextchar
             except (StopIteration, requests.RequestException):
                 time.sleep(self.retry / 1000.0)
-                self._connect()
+                self.connect()
 
                 # The SSE spec only supports resuming from a whole message, so
                 # if we have half a message we should throw it out.
@@ -87,9 +86,9 @@ class SSEClient(object):
         self.buf = tail
         msg = Event.parse(head)  # Iterable object
 
-        if msg.data == "credential is no longer valid":
+        if msg.event == "auth_revoked":
             print("credential is no longer valid, conecting... event={}".format(msg.event))
-            self._connect()  # TODO: check if is better return mge auth_revoked
+            self.connect()
             return None
 
         # If the server requests a specific retry delay, we need to honor it.

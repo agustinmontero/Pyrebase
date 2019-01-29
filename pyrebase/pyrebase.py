@@ -190,6 +190,8 @@ class Database:
         self.last_push_time = 0
         self.last_rand_chars = []
 
+        # self.stream
+
     def order_by_key(self):
         self.build_query["orderBy"] = "$key"
         return self
@@ -249,8 +251,8 @@ class Database:
                 parameters[param] = self.build_query[param]
         # reset path and build_query for next query
         request_ref = '{0}{1}.json?{2}'.format(self.database_url, self.path, urlencode(parameters))
-        self.path = ""
-        self.build_query = {}
+        # self.path = ""  # TODO: Review another methos with the same line, can be a problem(or not)!
+        # self.build_query = {}
         return request_ref
 
     def build_headers(self, token=None):
@@ -335,9 +337,9 @@ class Database:
         raise_detailed_error(request_object)
         return request_object.json()
 
-    def stream(self, stream_handler, stop_evt: threading.Event, token=None, stream_id=None, ):
-        request_ref = self.build_request_url(token)
-        return Stream(request_ref, stream_handler, self.build_headers, stream_id, stop_evt)
+    def stream(self, stream_handler, stop_evt: threading.Event, token, stream_id=None, ):
+        request_url = self.build_request_url(token)
+        return Stream(request_url, stream_handler, stream_id, stop_evt)
 
     @staticmethod
     def check_token(database_url, path, token):
@@ -523,47 +525,19 @@ class Pyre:
         return self.item[0]
 
 
-class ClosableSSEClient(SSEClient):
-    def __init__(self, *args, **kwargs):
-        self.should_connect = True
-        try:
-            super(ClosableSSEClient, self).__init__(*args, **kwargs)
-        except Exception:
-            raise
-
-    def _connect(self):
-        if self.should_connect:
-            try:
-                super(ClosableSSEClient, self)._connect()
-            except Exception:
-                raise
-
-        else:
-            raise StopIteration()
-
-    def close(self):
-        self.should_connect = False
-        self.retry = 0
-        if self.resp:
-            self.resp.close()
-
-
 class Stream(threading.Thread):
-    def __init__(self, url, stream_handler, build_headers, stream_id, stop_evt: threading.Event):
+    def __init__(self, request_url, stream_handler, stream_id, stop_evt: threading.Event):
         super().__init__()
+        self.request_url = request_url
         self.setDaemon(True)
         self.setName("Stream-thread")
         self.stop_evt = stop_evt
-        self.build_headers = build_headers
-        self.url = url
         self.stream_handler = stream_handler
         self.stream_id = stream_id
-        self.session = Session()
-        self.sse = None
+        self.sse = SSEClient(self.request_url)
 
     def run(self):
         try:
-            self.sse = ClosableSSEClient(self.url, session=self.session, build_headers=self.build_headers)
             for msg in self.sse:
                 if msg:
                     msg_data = json.loads(msg.data, encoding='utf-8') or {}
@@ -577,11 +551,3 @@ class Stream(threading.Thread):
             traceback.print_exc(file=sys.stdout)
             print("-" * 60)
             self.stop_evt.set()
-
-    def close(self):
-        if self.sse:
-            # while not self.sse and not hasattr(self.sse, 'resp'):
-            #     time.sleep(0.001)
-            self.sse.running = False
-            self.sse.close()
-        return

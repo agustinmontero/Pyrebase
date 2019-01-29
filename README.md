@@ -142,7 +142,7 @@ auth.get_account_info(user['idToken'])
 
 #### Refreshing tokens
 ```python
-user = auth.refresh(user['refreshToken'])
+user = auth.refresh(user['ºshToken'])
 ```
 
 ## Database
