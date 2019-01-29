@@ -1,6 +1,7 @@
-import sys, traceback
+import sys
+import traceback
+
 import requests
-from requests import Session
 from requests.exceptions import HTTPError
 
 try:
