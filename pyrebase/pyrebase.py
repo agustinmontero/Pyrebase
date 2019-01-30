@@ -301,7 +301,7 @@ class Database:
         if json_kwargs is None:
             json_kwargs = {}
         request_ref = self.check_token(self.database_url, self.path, token)
-        self.path = ""
+        # self.path = ""
         headers = self.build_headers(token)
         request_object = self.requests.post(
             request_ref, headers=headers, data=json.dumps(data, **json_kwargs).encode("utf-8"))
@@ -312,7 +312,7 @@ class Database:
         if json_kwargs is None:
             json_kwargs = {}
         request_ref = self.check_token(self.database_url, self.path, token)
-        self.path = ""
+        # self.path = ""
         headers = self.build_headers(token)
         request_object = self.requests.put(
             request_ref, headers=headers, data=json.dumps(data, **json_kwargs).encode("utf-8"))
@@ -323,7 +323,7 @@ class Database:
         if json_kwargs is None:
             json_kwargs = {}
         request_ref = self.check_token(self.database_url, self.path, token)
-        self.path = ""
+        # self.path = ""
         headers = self.build_headers(token)
         request_object = self.requests.patch(
             request_ref, headers=headers, data=json.dumps(data, **json_kwargs).encode("utf-8"))
@@ -332,7 +332,7 @@ class Database:
 
     def remove(self, token=None):
         request_ref = self.check_token(self.database_url, self.path, token)
-        self.path = ""
+        # self.path = ""
         headers = self.build_headers(token)
         request_object = self.requests.delete(request_ref, headers=headers)
         raise_detailed_error(request_object)
